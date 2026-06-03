@@ -2,27 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/constants/api_constants.dart';
-import 'analisis_screen.dart'; // untuk AnalisisItem (arguments)
 
 // =========================================================
 // MODEL DETAIL
 // =========================================================
 class DetailAnalisisData {
   final int minggu;
-  final String tema, namaAnak, kelompok;
-  final String statusDominan; // ← TAMBAH INI
+  final String tema, namaAnak, kelompok, statusDominan;
   final String? foto;
   final int totalBb, totalMb, totalBsh, totalBsb;
   final List<PerAspekData> perAspek;
- 
+
   const DetailAnalisisData({
     required this.minggu,
     required this.tema,
     required this.namaAnak,
     required this.kelompok,
-    required this.statusDominan, // ← TAMBAH INI
+    required this.statusDominan,
     this.foto,
     required this.totalBb,
     required this.totalMb,
@@ -84,63 +83,74 @@ class DetailAnalisisScreen extends StatefulWidget {
 }
 
 class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
-  String _stripMarkdown(String text) {
-    return text
-        .replaceAll(RegExp(r'#{1,6}\s*'), '')        // hapus ## heading
-        .replaceAll(RegExp(r'\*\*(.+?)\*\*'), r'$1') // **bold** → bold
-        .replaceAll(RegExp(r'\*(.+?)\*'), r'$1')     // *italic* → italic
-        .replaceAll(RegExp(r'__(.+?)__'), r'$1')     // __bold__ → bold
-        .replaceAll(RegExp(r'_(.+?)_'), r'$1')       // _italic_ → italic
-        .replaceAll(RegExp(r'^\s*[-*]\s+', multiLine: true), '• ') // list → bullet
-        .replaceAll(RegExp(r'\n{3,}'), '\n\n')       // max 2 baris kosong
-        .trim();
-  }
   DetailAnalisisData? _data;
   bool _isLoading = true;
   String? _error;
+  int? _minggu;
+
+  // ── KEY SharedPreferences ──
+  static const _kMinggu = 'analisis_minggu';
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final auth = context.read<AuthProvider>();
+      await _initData();
+    });
+  }
 
-      // Tunggu session selesai dimuat
-      if (auth.user == null) {
-        await auth.loadSession();
-      }
+  Future<void> _initData() async {
+    final args  = ModalRoute.of(context)?.settings.arguments;
+    final prefs = await SharedPreferences.getInstance();
 
-      // Cek lagi setelah loadSession
-      if (!mounted) return;
+    int? minggu;
+    if (args is int) {
+      minggu = args;
+    } else if (args is Map<String, dynamic>) {
+      minggu = int.tryParse(args['minggu']?.toString() ?? '');
+    }
 
-      final authAfter = context.read<AuthProvider>();
-
-      if (authAfter.user == null) {
-        // Session tidak ada — paksa login ulang
+    if (minggu != null) {
+      // Ada arguments → simpan ke SharedPreferences
+      await prefs.setInt(_kMinggu, minggu);
+      _minggu = minggu;
+    } else {
+      // Tidak ada arguments (habis refresh) → baca dari SharedPreferences
+      final saved = prefs.getInt(_kMinggu);
+      if (saved == null) {
+        if (!mounted) return;
         setState(() {
-          _error = 'Sesi berakhir. Silakan login ulang.';
+          _error    = 'Silakan buka dari halaman Analisis';
           _isLoading = false;
         });
         return;
       }
+      _minggu = saved;
+    }
 
-      final args = ModalRoute.of(context)?.settings.arguments;
-      if (args != null && args is AnalisisItem) {
-        _fetchDetail(args.minggu);
-      } else {
-        setState(() {
-          _error = 'Data tidak ditemukan';
-          _isLoading = false;
-        });
-      }
-    });
+    // Pastikan session siap
+    final auth = context.read<AuthProvider>();
+    if (auth.user == null) await auth.loadSession();
+    if (!mounted) return;
+
+    if (context.read<AuthProvider>().user == null) {
+      setState(() {
+        _error    = 'Sesi berakhir, silakan login ulang';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    _fetchDetail(_minggu!);
   }
 
   Future<void> _fetchDetail(int minggu) async {
+    if (!mounted) return;
     setState(() { _isLoading = true; _error = null; });
+
     try {
       final auth = context.read<AuthProvider>();
-      final dio = Dio();
+      final dio  = Dio();
       final response = await dio.get(
         '${ApiConstants.baseUrl}/parent/analisis/$minggu',
         options: Options(headers: {
@@ -155,13 +165,14 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
             .map((e) => PerAspekData.fromJson(Map<String, dynamic>.from(e)))
             .toList();
 
+        if (!mounted) return;
         setState(() {
           _data = DetailAnalisisData(
             minggu:        int.tryParse(d['minggu']?.toString() ?? '0') ?? 0,
             tema:          d['tema']?.toString() ?? '-',
             namaAnak:      d['nama_anak']?.toString() ?? '-',
             kelompok:      d['kelompok']?.toString() ?? '-',
-            statusDominan: d['status_dominan']?.toString() ?? '-', // ← TAMBAH INI
+            statusDominan: d['status_dominan']?.toString() ?? '-',
             foto:          d['foto']?.toString(),
             totalBb:       int.tryParse(d['total_bb']?.toString() ?? '0') ?? 0,
             totalMb:       int.tryParse(d['total_mb']?.toString() ?? '0') ?? 0,
@@ -172,11 +183,26 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
           _isLoading = false;
         });
       } else {
+        if (!mounted) return;
         setState(() { _error = 'Gagal memuat data'; _isLoading = false; });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() { _error = e.toString(); _isLoading = false; });
     }
+  }
+
+  // ── STRIP MARKDOWN ──
+  String _stripMarkdown(String text) {
+    return text
+        .replaceAll(RegExp(r'#{1,6}\s*'), '')
+        .replaceAll(RegExp(r'\*\*(.+?)\*\*'), r'$1')
+        .replaceAll(RegExp(r'\*(.+?)\*'), r'$1')
+        .replaceAll(RegExp(r'__(.+?)__'), r'$1')
+        .replaceAll(RegExp(r'_(.+?)_'), r'$1')
+        .replaceAll(RegExp(r'^\s*[-*]\s+', multiLine: true), '• ')
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .trim();
   }
 
   // ── HELPERS WARNA ──
@@ -232,17 +258,14 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments as AnalisisItem?;
-    if (args == null) return _buildErrorState(0);
-
     return Scaffold(
       backgroundColor: const Color(0xFFF0F7FA),
       body: SafeArea(
         child: _isLoading
             ? _buildLoading()
             : _error != null
-                ? _buildErrorState(args.minggu)
-                : _buildContent(args),
+                ? _buildErrorState()
+                : _buildContent(),
       ),
     );
   }
@@ -251,35 +274,26 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
     return const Center(child: CircularProgressIndicator(color: Color(0xFF0E7490)));
   }
 
-  Widget _buildContent(AnalisisItem args) {
+  Widget _buildContent() {
     final d = _data!;
 
-    // Hitung statistik
-    final totalAspek = d.perAspek.length;
-    final aspekBaik = d.perAspek.where((e) =>
+    final totalAspek     = d.perAspek.length;
+    final aspekBaik      = d.perAspek.where((e) =>
         e.statusPerkembangan == 'Berkembang Sangat Baik' ||
         e.statusPerkembangan == 'Berkembang Sesuai Harapan').length;
     final perluStimulasi = d.perAspek.where((e) =>
         e.statusPerkembangan == 'Mulai Berkembang' ||
         e.statusPerkembangan == 'Belum Berkembang').length;
-    // SESUDAH:
-      final dataValid = d.perAspek.where((e) => e.totalPenilaian >= 3).length;
-
-    // Status dominan keseluruhan
-    // GANTI DENGAN INI (1 baris):
-    final statusDominan = d.statusDominan;
+    final dataValid      = d.perAspek.where((e) => e.totalPenilaian >= 3).length;
+    final statusDominan  = d.statusDominan;
 
     return CustomScrollView(
       slivers: [
-        SliverToBoxAdapter(child: _buildHeader(context, args, d)),
+        SliverToBoxAdapter(child: _buildHeader(d)),
         SliverToBoxAdapter(child: _buildStatRow(totalAspek, aspekBaik, perluStimulasi, dataValid, totalAspek)),
         SliverToBoxAdapter(child: _buildKesimpulan(d, statusDominan)),
         SliverToBoxAdapter(child: _buildCapaianBar(d)),
-
-        // ── PER ASPEK ──
-        SliverToBoxAdapter(
-          child: _buildSectionTitle('Analisis Per Aspek', Icons.bar_chart_rounded),
-        ),
+        SliverToBoxAdapter(child: _buildSectionTitle('Analisis Per Aspek', Icons.bar_chart_rounded)),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
           sliver: SliverList(
@@ -289,12 +303,8 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
             ),
           ),
         ),
-
-        // ── REKOMENDASI AI (ambil yang pertama punya rekomendasi) ──
         if (d.perAspek.any((e) => e.rekomendasiAi.isNotEmpty && e.rekomendasiAi != '-')) ...[
-          SliverToBoxAdapter(
-            child: _buildSectionTitle('Rekomendasi AI — Gemini', Icons.auto_awesome_rounded),
-          ),
+          SliverToBoxAdapter(child: _buildSectionTitle('Rekomendasi AI — Gemini', Icons.auto_awesome_rounded)),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
             sliver: SliverToBoxAdapter(
@@ -312,7 +322,7 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
   }
 
   // ── HEADER ──
-  Widget _buildHeader(BuildContext context, AnalisisItem args, DetailAnalisisData d) {
+  Widget _buildHeader(DetailAnalisisData d) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
       decoration: const BoxDecoration(
@@ -332,7 +342,7 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
           Row(
             children: [
               GestureDetector(
-                onTap: () => Navigator.pop(context),
+                onTap: () => Navigator.pushReplacementNamed(context, '/analisis'),
                 child: Container(
                   width: 40, height: 40,
                   decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
@@ -342,7 +352,6 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
               const SizedBox(width: 12),
               Text("KB Nurul'Ain", style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
               const Spacer(),
-              // AI badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(10)),
@@ -358,8 +367,6 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
             ],
           ),
           const SizedBox(height: 24),
-
-          // Foto + info anak
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -394,7 +401,9 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text('Tema: ${d.tema}', style: GoogleFonts.plusJakartaSans(color: Colors.white.withOpacity(0.8), fontSize: 12), maxLines: 2),
+                    Text('Tema: ${d.tema}',
+                        style: GoogleFonts.plusJakartaSans(color: Colors.white.withOpacity(0.8), fontSize: 12),
+                        maxLines: 2),
                   ],
                 ),
               ),
@@ -419,13 +428,13 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Row(
         children: [
-          _statBox('$total', 'Total Aspek', Icons.layers_rounded, const Color(0xFFE0F2FE), const Color(0xFF0E7490)),
+          _statBox('$total',          'Total Aspek',     Icons.layers_rounded,        const Color(0xFFE0F2FE), const Color(0xFF0E7490)),
           const SizedBox(width: 10),
-          _statBox('$baik', 'Aspek Baik', Icons.check_circle_rounded, const Color(0xFFD1FAE5), const Color(0xFF059669)),
+          _statBox('$baik',           'Aspek Baik',      Icons.check_circle_rounded,  const Color(0xFFD1FAE5), const Color(0xFF059669)),
           const SizedBox(width: 10),
-          _statBox('$perlu', 'Perlu Stimulasi', Icons.warning_amber_rounded, const Color(0xFFFEF3C7), const Color(0xFFD97706)),
+          _statBox('$perlu',          'Perlu Stimulasi', Icons.warning_amber_rounded,  const Color(0xFFFEF3C7), const Color(0xFFD97706)),
           const SizedBox(width: 10),
-          _statBox('$valid/$totalAspek', 'Data Valid', Icons.verified_rounded, const Color(0xFFEDE9FE), const Color(0xFF7C3AED)),
+          _statBox('$valid/$totalAspek', 'Data Valid',   Icons.verified_rounded,      const Color(0xFFEDE9FE), const Color(0xFF7C3AED)),
         ],
       ),
     );
@@ -473,7 +482,6 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
@@ -483,69 +491,46 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
             ),
             child: Row(
               children: [
-                Container(
-                  width: 8, height: 8,
-                  decoration: BoxDecoration(color: const Color(0xFF0E7490), borderRadius: BorderRadius.circular(4)),
-                ),
+                Container(width: 8, height: 8, decoration: BoxDecoration(color: const Color(0xFF0E7490), borderRadius: BorderRadius.circular(4))),
                 const SizedBox(width: 10),
                 Text('KESIMPULAN PERKEMBANGAN MINGGU INI',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF0E7490), letterSpacing: 0.5)),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF0E7490), letterSpacing: 0.5)),
               ],
             ),
           ),
-
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Status dominan besar
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: _statusBg(statusDominan),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(_statusIcon(statusDominan), color: _statusColor(statusDominan), size: 16),
-                          const SizedBox(width: 6),
-                          Text(statusDominan, style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w800, color: _statusColor(statusDominan))),
-                        ],
-                      ),
-                    ),
-                  ],
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(color: _statusBg(statusDominan), borderRadius: BorderRadius.circular(12)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(_statusIcon(statusDominan), color: _statusColor(statusDominan), size: 16),
+                      const SizedBox(width: 6),
+                      Text(statusDominan, style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w800, color: _statusColor(statusDominan))),
+                    ],
+                  ),
                 ),
-
                 const SizedBox(height: 10),
-
-                // Nama · tema · minggu
-                Text(
-                  '${d.namaAnak} • Tema: ${d.tema} • Minggu ke-${d.minggu}',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF64748B)),
-                ),
-
+                Text('${d.namaAnak} • Tema: ${d.tema} • Minggu ke-${d.minggu}',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF64748B))),
                 const SizedBox(height: 10),
-
-                // Ringkasan capaian
                 Row(
                   children: [
                     _capaianPill('BSB', d.totalBsb),
                     const SizedBox(width: 6),
                     _capaianPill('BSH', d.totalBsh),
                     const SizedBox(width: 6),
-                    _capaianPill('MB', d.totalMb),
+                    _capaianPill('MB',  d.totalMb),
                     const SizedBox(width: 6),
-                    _capaianPill('BB', d.totalBb),
+                    _capaianPill('BB',  d.totalBb),
                   ],
                 ),
-
                 const SizedBox(height: 10),
-
-                // Tanggal
                 Row(
                   children: [
                     const Icon(Icons.calendar_today_rounded, size: 12, color: Color(0xFF94A3B8)),
@@ -553,6 +538,26 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
                     Text('Dicetak pada: $tanggal', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF94A3B8))),
                   ],
                 ),
+                if (d.perAspek.any((e) => e.totalPenilaian < 3)) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(10)),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFFD97706)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Data masih terbatas. Tambahkan lebih banyak penilaian untuk hasil yang lebih akurat.',
+                            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFFD97706)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -588,23 +593,18 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
         children: [
           Text('Distribusi Capaian', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B))),
           const SizedBox(height: 12),
-
-          // Progress bar
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: Row(
               children: [
                 if (d.totalBsb > 0) Expanded(flex: d.totalBsb, child: Container(height: 10, color: const Color(0xFF059669))),
                 if (d.totalBsh > 0) Expanded(flex: d.totalBsh, child: Container(height: 10, color: const Color(0xFF0E7490))),
-                if (d.totalMb > 0)  Expanded(flex: d.totalMb,  child: Container(height: 10, color: const Color(0xFFD97706))),
-                if (d.totalBb > 0)  Expanded(flex: d.totalBb,  child: Container(height: 10, color: const Color(0xFFDC2626))),
+                if (d.totalMb  > 0) Expanded(flex: d.totalMb,  child: Container(height: 10, color: const Color(0xFFD97706))),
+                if (d.totalBb  > 0) Expanded(flex: d.totalBb,  child: Container(height: 10, color: const Color(0xFFDC2626))),
               ],
             ),
           ),
-
           const SizedBox(height: 10),
-
-          // Legend
           Row(
             children: [
               _legendItem('BSB', d.totalBsb, total, const Color(0xFF059669)),
@@ -668,7 +668,6 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header aspek
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -678,9 +677,7 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
             ),
             child: Row(
               children: [
-                Expanded(
-                  child: Text(a.aspek, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 14, color: const Color(0xFF1E293B))),
-                ),
+                Expanded(child: Text(a.aspek, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 14, color: const Color(0xFF1E293B)))),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(color: _statusBg(a.statusPerkembangan), borderRadius: BorderRadius.circular(8)),
@@ -696,13 +693,11 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
               ],
             ),
           ),
-
           Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Nilai dominan + confidence
                 Row(
                   children: [
                     Container(
@@ -725,20 +720,15 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 12),
-
-                // Distribusi BB/MB/BSH/BSB
                 Row(
                   children: [
-                    _aspekCapaianItem('BB', a.jumlahBb),
-                    _aspekCapaianItem('MB', a.jumlahMb),
+                    _aspekCapaianItem('BB',  a.jumlahBb),
+                    _aspekCapaianItem('MB',  a.jumlahMb),
                     _aspekCapaianItem('BSH', a.jumlahBsh),
                     _aspekCapaianItem('BSB', a.jumlahBsb),
                   ],
                 ),
-
-                // Indikator lemah
                 if (a.indikatorLemah.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Container(
@@ -756,16 +746,21 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        ...a.indikatorLemah.map((ind) => Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('• ', style: TextStyle(color: Color(0xFFDC2626), fontSize: 12)),
-                              Expanded(child: Text(ind.toString(), style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFFDC2626)))),
-                            ],
-                          ),
-                        )),
+                        ...a.indikatorLemah.map((ind) {
+                          final nama = ind is Map
+                              ? (ind['nama']?.toString() ?? ind.toString())
+                              : ind.toString();
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('• ', style: TextStyle(color: Color(0xFFDC2626), fontSize: 12)),
+                                Expanded(child: Text(nama, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFFDC2626)))),
+                              ],
+                            ),
+                          );
+                        }),
                       ],
                     ),
                   ),
@@ -808,7 +803,6 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
@@ -821,7 +815,8 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
                 const Icon(Icons.auto_awesome_rounded, color: Color(0xFF7C3AED), size: 16),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('Aspek ${a.aspek}', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w800, color: const Color(0xFF7C3AED))),
+                  child: Text('Dihasilkan berdasarkan analisis perkembangan minggu ini',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF7C3AED))),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -838,19 +833,11 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
               ],
             ),
           ),
-
-          // Isi rekomendasi
           Padding(
             padding: const EdgeInsets.all(16),
             child: Text(
               _stripMarkdown(a.rekomendasiAi),
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF334155), // Slate-700: Sangat nyaman dibaca untuk paragraf panjang
-                height: 1.6,                    // Memberikan line-spacing (jarak antar baris) agar tidak padat
-                letterSpacing: 0.2,
-              ),
+              style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF334155), height: 1.6, letterSpacing: 0.2),
             ),
           ),
         ],
@@ -859,23 +846,44 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
   }
 
   // ── ERROR STATE ──
-  Widget _buildErrorState(int minggu) {
+  Widget _buildErrorState() {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 64, height: 64, decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(18)), child: const Icon(Icons.error_outline_rounded, size: 32, color: Color(0xFFDC2626))),
+          Container(
+            width: 64, height: 64,
+            decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(18)),
+            child: const Icon(Icons.error_outline_rounded, size: 32, color: Color(0xFFDC2626)),
+          ),
           const SizedBox(height: 16),
           Text('Gagal memuat data', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 16, color: const Color(0xFF1E293B))),
-          const SizedBox(height: 20),
-          GestureDetector(
-            onTap: () => _fetchDetail(minggu),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              decoration: BoxDecoration(color: const Color(0xFF0E7490), borderRadius: BorderRadius.circular(12)),
-              child: Text('Coba Lagi', style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w700)),
+          if (_error != null) ...[
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(_error!, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF94A3B8)), textAlign: TextAlign.center),
             ),
-          ),
+          ],
+          const SizedBox(height: 20),
+          if (_minggu != null)
+            GestureDetector(
+              onTap: () => _fetchDetail(_minggu!),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                decoration: BoxDecoration(color: const Color(0xFF0E7490), borderRadius: BorderRadius.circular(12)),
+                child: Text('Coba Lagi', style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w700)),
+              ),
+            )
+          else
+            GestureDetector(
+              onTap: () => Navigator.pushReplacementNamed(context, '/analisis'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                decoration: BoxDecoration(color: const Color(0xFF0E7490), borderRadius: BorderRadius.circular(12)),
+                child: Text('Kembali ke Analisis', style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w700)),
+              ),
+            ),
         ],
       ),
     );

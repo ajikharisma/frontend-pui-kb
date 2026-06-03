@@ -200,7 +200,7 @@ class _AnalisisScreenState extends State<AnalisisScreen> {
                       onTap: () => Navigator.pushNamed(
                         context,
                         '/detail-analisis',
-                        arguments: _filtered[i],
+                        arguments: _filtered[i].minggu, // ← kirim int saja
                       ),
                     ),
                     childCount: _filtered.length,
@@ -423,8 +423,8 @@ class _AnalisisScreenState extends State<AnalisisScreen> {
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Beranda'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart_rounded), label: 'Data'),
-          BottomNavigationBarItem(icon: Icon(Icons.lightbulb_rounded), label: 'Analisis AI'),
+          BottomNavigationBarItem(icon: Icon(Icons.bar_chart_rounded), label: 'Data Perkembangan'),
+          BottomNavigationBarItem(icon: Icon(Icons.lightbulb_rounded), label: 'Hasil Analisis'),
           BottomNavigationBarItem(icon: Icon(Icons.badge_rounded), label: 'Profil'),
         ],
       ),

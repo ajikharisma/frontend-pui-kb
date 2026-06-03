@@ -540,7 +540,7 @@ class _PerkembanganScreenState extends State<PerkembanganScreen>
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Beranda'),
           BottomNavigationBarItem(icon: Icon(Icons.bar_chart_rounded), label: 'Data Perkembangan'),
-          BottomNavigationBarItem(icon: Icon(Icons.lightbulb_rounded), label: 'Analisis AI'),
+          BottomNavigationBarItem(icon: Icon(Icons.lightbulb_rounded), label: 'Hasil Analisis'),
           BottomNavigationBarItem(icon: Icon(Icons.badge_rounded), label: 'Profil'),
         ],
       ),
