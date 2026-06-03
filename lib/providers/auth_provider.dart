@@ -165,6 +165,37 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // 🔥 SIMPAN CATATAN BARU KE DATABASE LARAVEL (SINKRONISASI REAL-TIME)
+  Future<bool> simpanCatatan({
+    required String judul,
+    required String isi,
+    required String tanggal,
+  }) async {
+    try {
+
+      final response = await _dio.post(
+        '${ApiConstants.baseUrl}/parent/catatan',
+        data: {
+          'judul_catatan': judul,
+          'isi_catatan': isi,
+          'tanggal': tanggal,
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer ${_user!.token}',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      return response.data['success'] == true;
+
+    } catch (e) {
+      print(e);
+      return false;
+    }
+  }
+
   // 🔥 LOGOUT
   Future<void> logout() async {
     _user = null;

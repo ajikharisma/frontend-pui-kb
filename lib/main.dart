@@ -9,6 +9,7 @@ import 'screens/perkembangan/detail_perkembangan_screen.dart';
 import 'screens/analisis/analisis_screen.dart';
 import 'screens/analisis/detail_analisis_screen.dart';
 import 'screens/profile/profile_screen.dart';        // ← TAMBAH
+import 'screens/catatan/catatan_rumah_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -43,6 +44,7 @@ class MyApp extends StatelessWidget {
           '/analisis':       (_) => const AnalisisScreen(),
           '/detail-analisis': (_) => const DetailAnalisisScreen(),
           '/profile': (_) => const ProfileScreen(),
+          '/catatan-rumah': (context) => const CatatanRumahScreen(),
         },
       ),
     );
