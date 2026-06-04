@@ -538,26 +538,6 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
                     Text('Dicetak pada: $tanggal', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF94A3B8))),
                   ],
                 ),
-                if (d.perAspek.any((e) => e.totalPenilaian < 3)) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(10)),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFFD97706)),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Data masih terbatas. Tambahkan lebih banyak penilaian untuk hasil yang lebih akurat.',
-                            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFFD97706)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ],
             ),
           ),

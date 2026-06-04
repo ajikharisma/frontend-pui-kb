@@ -170,14 +170,41 @@ class DashboardScreen extends StatelessWidget {
               ),
               const Spacer(),
               GestureDetector(
-                onTap: () => Navigator.pushNamed(context, '/profile'),
+                onTap: () {
+                  Navigator.pushNamed(context, '/notifikasi');
+                },
                 child: Container(
-                  width: 40, height: 40,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.person_rounded, color: Colors.white, size: 22),
+                  child: Stack(
+                    children: [
+                      const Center(
+                        child: Icon(
+                          Icons.notifications_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+
+                      // Badge jumlah notifikasi
+                      Positioned(
+                        right: 6,
+                        top: 6,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
