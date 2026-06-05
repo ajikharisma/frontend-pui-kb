@@ -235,7 +235,7 @@ class DashboardScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              "Pantau perkembangan anak Anda secara real-time",
+              "Pantau perkembangan anak Anda di KB Nurul'Ain",
               style: GoogleFonts.plusJakartaSans(
                 color: Colors.white.withOpacity(0.9),
                 fontSize: 12,
@@ -535,7 +535,7 @@ class DashboardScreen extends StatelessWidget {
           BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Beranda'),
           BottomNavigationBarItem(icon: Icon(Icons.bar_chart_rounded), label: 'Data Perkembangan'),
           BottomNavigationBarItem(icon: Icon(Icons.lightbulb_rounded), label: 'Hasil Analisis'),
-          BottomNavigationBarItem(icon: Icon(Icons.badge_rounded), label: 'Profil'),
+          BottomNavigationBarItem(icon: Icon(Icons.manage_accounts_rounded), label: 'Profil'),
         ],
       ),
     );

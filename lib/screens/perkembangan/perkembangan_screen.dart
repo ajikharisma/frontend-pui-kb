@@ -248,17 +248,6 @@ class _PerkembanganScreenState extends State<PerkembanganScreen>
                 ),
               ),
               const Spacer(),
-              // Foto anak kecil di header
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.white.withOpacity(0.2),
-                backgroundImage: anak?['foto'] != null
-                    ? NetworkImage(ApiConstants.fotoUrl(anak!['foto']))
-                    : null,
-                child: anak?['foto'] == null
-                    ? const Icon(Icons.child_care, color: Colors.white, size: 18)
-                    : null,
-              ),
             ],
           ),
 
@@ -541,7 +530,7 @@ class _PerkembanganScreenState extends State<PerkembanganScreen>
           BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Beranda'),
           BottomNavigationBarItem(icon: Icon(Icons.bar_chart_rounded), label: 'Data Perkembangan'),
           BottomNavigationBarItem(icon: Icon(Icons.lightbulb_rounded), label: 'Hasil Analisis'),
-          BottomNavigationBarItem(icon: Icon(Icons.badge_rounded), label: 'Profil'),
+          BottomNavigationBarItem(icon: Icon(Icons.manage_accounts_rounded), label: 'Profil'),
         ],
       ),
     );

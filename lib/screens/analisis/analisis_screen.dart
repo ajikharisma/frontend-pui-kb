@@ -425,7 +425,7 @@ class _AnalisisScreenState extends State<AnalisisScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Beranda'),
           BottomNavigationBarItem(icon: Icon(Icons.bar_chart_rounded), label: 'Data Perkembangan'),
           BottomNavigationBarItem(icon: Icon(Icons.lightbulb_rounded), label: 'Hasil Analisis'),
-          BottomNavigationBarItem(icon: Icon(Icons.badge_rounded), label: 'Profil'),
+          BottomNavigationBarItem(icon: Icon(Icons.manage_accounts_rounded), label: 'Profil'),
         ],
       ),
     );
