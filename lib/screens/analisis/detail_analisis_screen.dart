@@ -519,17 +519,19 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
                 Text('${d.namaAnak} • Tema: ${d.tema} • Minggu ke-${d.minggu}',
                     style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF64748B))),
                 const SizedBox(height: 10),
-                Row(
+                
+                // ── PERUBAHAN DI SINI: Menggunakan Wrap menggantikan Row ──
+                Wrap(
+                  spacing: 6, // Jarak horizontal antar pill
+                  runSpacing: 6, // Jarak vertikal jika pill turun ke baris baru
                   children: [
                     _capaianPill('BSB', d.totalBsb),
-                    const SizedBox(width: 6),
                     _capaianPill('BSH', d.totalBsh),
-                    const SizedBox(width: 6),
                     _capaianPill('MB',  d.totalMb),
-                    const SizedBox(width: 6),
                     _capaianPill('BB',  d.totalBb),
                   ],
                 ),
+                
                 const SizedBox(height: 10),
                 Row(
                   children: [
