@@ -242,7 +242,7 @@ class _AnalisisScreenState extends State<AnalisisScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Text("KB Nurul'Ain", style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+              Text("KB Nurul Ain", style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
               const Spacer(),
               GestureDetector(
                 onTap: _fetchList,

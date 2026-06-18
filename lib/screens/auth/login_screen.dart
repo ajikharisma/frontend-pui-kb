@@ -95,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      "KB Nurul'Ain",
+                      "KB Nurul Ain",
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
@@ -160,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 8),
 
                           Text(
-                            "Masuk ke dashboard orang tua KB Nurul'Ain",
+                            "Masuk ke dashboard orang tua KB Nurul Ain",
                             textAlign: TextAlign.center,
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 13,
@@ -284,7 +284,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   children: [
                     Text(
-                      "KB Nurul'Ain Kabupaten Bintan",
+                      "KB Nurul Ain Kabupaten Bintan",
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12, color: const Color(0xFF94A3B8),
                       ),

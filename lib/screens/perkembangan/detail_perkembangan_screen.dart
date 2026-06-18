@@ -290,7 +290,7 @@ class _DetailPerkembanganScreenState extends State<DetailPerkembanganScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Text("KB Nurul'Ain",
+              Text("KB Nurul Ain",
                   style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
               const Spacer(),
               Container(

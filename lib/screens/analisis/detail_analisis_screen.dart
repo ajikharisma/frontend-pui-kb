@@ -196,10 +196,13 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
   String _stripMarkdown(String text) {
     return text
         .replaceAll(RegExp(r'#{1,6}\s*'), '')
-        .replaceAll(RegExp(r'\*\*(.+?)\*\*'), r'$1')
-        .replaceAll(RegExp(r'\*(.+?)\*'), r'$1')
-        .replaceAll(RegExp(r'__(.+?)__'), r'$1')
-        .replaceAll(RegExp(r'_(.+?)_'), r'$1')
+        // Menggunakan lambda expression (match) => match[1] agar lebih aman di Dart
+        .replaceAllMapped(RegExp(r'\*\*(.+?)\*\*'), (match) => match[1] ?? '')
+        .replaceAllMapped(RegExp(r'\*(.+?)\*'), (match) => match[1] ?? '')
+        .replaceAllMapped(RegExp(r'__(.+?)__'), (match) => match[1] ?? '')
+        .replaceAllMapped(RegExp(r'_(.+?)_'), (match) => match[1] ?? '')
+        // Menghapus jika ada sisa simbol $1, $2, dst yang bocor dari database/API
+        .replaceAll(RegExp(r'\$\d+'), '') 
         .replaceAll(RegExp(r'^\s*[-*]\s+', multiLine: true), '• ')
         .replaceAll(RegExp(r'\n{3,}'), '\n\n')
         .trim();
@@ -350,7 +353,7 @@ class _DetailAnalisisScreenState extends State<DetailAnalisisScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Text("KB Nurul'Ain", style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+              Text("KB Nurul Ain", style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),

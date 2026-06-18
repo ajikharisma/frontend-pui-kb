@@ -180,7 +180,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: const Icon(Icons.school, color: Colors.white, size: 22),
               ),
               const SizedBox(width: 10),
-              Text("KB Nurul'Ain",
+              Text("KB Nurul Ain",
                   style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
               const Spacer(),
               GestureDetector(

@@ -161,7 +161,7 @@ class DashboardScreen extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Text(
-                "KB Nurul'Ain",
+                "KB Nurul Ain",
                 style: GoogleFonts.plusJakartaSans(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
@@ -235,7 +235,7 @@ class DashboardScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              "Pantau perkembangan anak Anda di KB Nurul'Ain",
+              "Pantau perkembangan anak Anda di KB Nurul Ain",
               style: GoogleFonts.plusJakartaSans(
                 color: Colors.white.withOpacity(0.9),
                 fontSize: 12,
