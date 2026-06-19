@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1092236040682",
+    "project_id": "kb-nurul-ain",
+    "storage_bucket": "kb-nurul-ain.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1092236040682:android:ce7c047e57f0f0a6997a93",
+        "android_client_info": {
+          "package_name": "com.example.frontendpui"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDVB2HB46MZRudz2YMWAg2sqWaQq6WWPcY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
