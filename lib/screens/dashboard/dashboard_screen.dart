@@ -1,13 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:dio/dio.dart';                              // ← TAMBAH
 import '../../providers/auth_provider.dart';
 import 'dart:convert';
 import '../../core/constants/api_constants.dart';
 import '../perkembangan/detail_perkembangan_screen.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {              // ← UBAH dari StatelessWidget
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();   // ← TAMBAH
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {         // ← TAMBAH class baru
+
+  int _jumlahNotifBelumDibaca = 0;                          // ← TAMBAH
+
+  @override
+  void initState() {                                         // ← TAMBAH
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchJumlahNotif();
+    });
+  }
+
+  // ← TAMBAH method baru ini
+  Future<void> _fetchJumlahNotif() async {
+    try {
+      final auth = context.read<AuthProvider>();
+      if (auth.user == null) return;
+
+      final dio = Dio();
+      final response = await dio.get(
+        '${ApiConstants.baseUrl}/parent/notifikasi',
+        options: Options(headers: {
+          'Authorization': 'Bearer ${auth.user!.token}',
+          'Accept': 'application/json',
+        }),
+      );
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        if (mounted) {
+          setState(() {
+            _jumlahNotifBelumDibaca = response.data['jumlah_belum_dibaca'] ?? 0;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Gagal ambil jumlah notif: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +139,7 @@ class DashboardScreen extends StatelessWidget {
         child: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(
-              child: _buildHeader(context, user?.nama ?? 'Orang Tua', namaAnak, kelompok, fotoAnak),
+              child: _buildHeader(context, user?.nama ?? 'Orang Tua', namaAnak, kelompok, fotoAnak, _jumlahNotifBelumDibaca),
             ),
             SliverToBoxAdapter(
               child: _buildProfilAnak(anak),
@@ -131,7 +175,7 @@ class DashboardScreen extends StatelessWidget {
 
   // ── HEADER ──
   Widget _buildHeader(BuildContext context, String namaUser, String namaAnak,
-      String kelompok, String? fotoAnak) {
+      String kelompok, String? fotoAnak, int jumlahNotifBelumDibaca) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
       decoration: const BoxDecoration(
@@ -170,8 +214,11 @@ class DashboardScreen extends StatelessWidget {
               ),
               const Spacer(),
               GestureDetector(
-                onTap: () {
-                  Navigator.pushNamed(context, '/notifikasi');
+                onTap: () async {
+                  await Navigator.pushNamed(context, '/notifikasi');
+                  // Setelah kembali dari halaman notifikasi, refresh badge
+                  // (karena bisa jadi user sudah baca beberapa notif)
+                  _fetchJumlahNotif();
                 },
                 child: Container(
                   width: 40,
@@ -190,19 +237,30 @@ class DashboardScreen extends StatelessWidget {
                         ),
                       ),
 
-                      // Badge jumlah notifikasi
-                      Positioned(
-                        right: 6,
-                        top: 6,
-                        child: Container(
-                          width: 10,
-                          height: 10,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
+                      // Badge jumlah notifikasi — hanya tampil kalau ada yang belum dibaca
+                      if (jumlahNotifBelumDibaca > 0)
+                        Positioned(
+                          right: 4,
+                          top: 4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFF0E7490), width: 1.5),
+                            ),
+                            child: Text(
+                              jumlahNotifBelumDibaca > 9 ? '9+' : '$jumlahNotifBelumDibaca',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),

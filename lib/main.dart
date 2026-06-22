@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+import 'firebase_options.dart';
 
 import 'providers/auth_provider.dart';
 import 'screens/auth/login_screen.dart';
@@ -8,15 +12,116 @@ import 'screens/perkembangan/perkembangan_screen.dart';
 import 'screens/perkembangan/detail_perkembangan_screen.dart';
 import 'screens/analisis/analisis_screen.dart';
 import 'screens/analisis/detail_analisis_screen.dart';
-import 'screens/profile/profile_screen.dart';        // ← TAMBAH
+import 'screens/profile/profile_screen.dart';
 import 'screens/catatan/catatan_rumah_screen.dart';
+import 'screens/notifikasi/notifikasi_screen.dart';
 
-void main() {
+final navigatorKey = GlobalKey<NavigatorState>();
+
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  debugPrint('[FCM BACKGROUND] Notifikasi diterima: ${message.notification?.title}');
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+
+  @override
+  void initState() {
+    super.initState();
+    _setupForegroundListener();
+  }
+
+  void _setupForegroundListener() {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      debugPrint('[FCM FOREGROUND] ${message.notification?.title}');
+
+      final context = navigatorKey.currentContext;
+      if (context == null) return;
+
+      final judul = message.notification?.title ?? 'Notifikasi Baru';
+      final isi   = message.notification?.body  ?? '';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF0E7490),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          margin: const EdgeInsets.all(12),
+          content: Row(
+            children: [
+              const Icon(Icons.notifications_active_rounded,
+                  color: Colors.white, size: 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      judul,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isi,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          action: SnackBarAction(
+            label: 'Lihat',
+            textColor: Colors.white,
+            onPressed: () {
+              navigatorKey.currentState?.pushNamed('/notifikasi');
+            },
+          ),
+        ),
+      );
+
+      final auth = context.read<AuthProvider>();
+      auth.fetchDashboardData();
+    });
+
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      debugPrint('[FCM] Notifikasi dibuka dari background');
+      navigatorKey.currentState?.pushNamed('/notifikasi');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +130,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
       ],
       child: MaterialApp(
+        navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         title: "KB Nurul'Ain",
         theme: ThemeData(
@@ -34,7 +140,6 @@ class MyApp extends StatelessWidget {
           ),
           useMaterial3: true,
         ),
-        // ← Ganti AuthWrapper dengan SplashWrapper
         home: const SplashWrapper(),
         routes: {
           '/login'     : (_) => const LoginScreen(),
@@ -45,16 +150,13 @@ class MyApp extends StatelessWidget {
           '/detail-analisis': (_) => const DetailAnalisisScreen(),
           '/profile': (_) => const ProfileScreen(),
           '/catatan-rumah': (context) => const CatatanRumahScreen(),
+          '/notifikasi': (_) => const NotifikasiScreen(), 
         },
       ),
     );
   }
 }
 
-// =========================================================
-// SPLASH WRAPPER — load session dulu sebelum tampil halaman
-// Ditambahkan untuk fix data hilang saat refresh
-// =========================================================
 class SplashWrapper extends StatefulWidget {
   const SplashWrapper({super.key});
 
@@ -72,7 +174,6 @@ class _SplashWrapperState extends State<SplashWrapper> {
   }
 
   Future<void> _checkSession() async {
-    // Panggil loadSession() dari AuthProvider
     await context.read<AuthProvider>().loadSession();
 
     if (mounted) {
@@ -82,7 +183,6 @@ class _SplashWrapperState extends State<SplashWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    // Tampil splash sementara session dicek
     if (_isChecking) {
       return const Scaffold(
         backgroundColor: Color(0xFF0E7490),
@@ -99,16 +199,11 @@ class _SplashWrapperState extends State<SplashWrapper> {
       );
     }
 
-    // Session sudah dicek — arahkan sesuai status login
     final isLoggedIn = context.read<AuthProvider>().isLoggedIn;
     return isLoggedIn ? const DashboardScreen() : const LoginScreen();
   }
 }
 
-// =========================================================
-// AUTH WRAPPER — tetap ada, tidak dihapus
-// (tidak dipakai sebagai home lagi, tapi bisa dipakai di tempat lain)
-// =========================================================
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
@@ -118,5 +213,3 @@ class AuthWrapper extends StatelessWidget {
     return auth.isLoggedIn ? const DashboardScreen() : const LoginScreen();
   }
 }
-
-// '/detail-analisis': (_) => const DetailAnalisisScreen(),

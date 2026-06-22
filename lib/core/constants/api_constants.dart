@@ -1,6 +1,8 @@
 class ApiConstants {
   static const String baseUrl = 'http://192.168.18.59:8000/api';
   static const String login = '/login';
+  static const String fcmToken = '/parent/fcm-token';   // ← opsional
+
 
   // 🔥 CUKUP GUNAKAN SATU FUNGSI INI SAJA (Gabungan helper proxy + debug print)
   static String fotoUrl(String? fotoPath) {
