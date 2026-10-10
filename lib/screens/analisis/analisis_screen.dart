@@ -262,9 +262,9 @@ class _AnalisisScreenState extends State<AnalisisScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Hasil Analisis AI', style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 24)),
+                    Text('Hasil Analisis', style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 24)),
                     const SizedBox(height: 6),
-                    Text('Rekap analisis perkembangan anak berbasis AI', style: GoogleFonts.plusJakartaSans(color: Colors.white.withOpacity(0.8), fontSize: 13)),
+                    Text('Rekap analisis perkembangan anak', style: GoogleFonts.plusJakartaSans(color: Colors.white.withOpacity(0.8), fontSize: 13)),
                   ],
                 ),
               ),
